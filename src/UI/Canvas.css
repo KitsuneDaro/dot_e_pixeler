@@ -1,0 +1,11 @@
+img {
+    width: 100%;
+    max-width: 20rem;
+    object-fit: contain;
+
+    image-rendering: pixelated;
+}
+
+img::before {
+    min-width: 10em;
+}

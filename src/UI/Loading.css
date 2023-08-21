@@ -1,0 +1,19 @@
+div.loading {
+    position: fixed;
+
+    top: calc(50% - 5rem);
+    left: calc(50% - 5rem);
+
+    width: 10rem;
+
+    background-color: lightsteelblue;
+
+    text-align: center;
+
+    border-style: solid;
+    border-radius: 0.5rem;
+    border-width: 0.25rem;
+    border-color: lightslategray;
+
+    padding: 0.25rem;
+}
