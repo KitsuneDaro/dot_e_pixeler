@@ -48,12 +48,10 @@ export class ClusteringImageRGB {
 
     // muから作るやつ
     static GetClusteringRGBDataByMu(rgba_data: Uint8ClampedArray, cluster_mu: Float32Array): Uint8ClampedArray {
-        const gpgpu = GPGPU.CreateGPGPU();
-
         const dist_n = Math.round(cluster_mu.length / 3);
         const data_n = Math.round(rgba_data.length / 4);
 
-        const parsed_data_n = gpgpu.getMaxTextureSize();
+        const parsed_data_n = GPGPU.gpgpu.getMaxTextureSize();
         const parsed_data_n_n = Math.ceil(data_n / parsed_data_n);
 
         const clustering_rgb_data_shader = `
@@ -110,7 +108,7 @@ export class ClusteringImageRGB {
 
             parsed_rgba_data.set(rgba_data.slice(i * parsed_data_n * 4, (i + 1) * parsed_data_n * 4), 0);
 
-            gpgpu.compute(clustering_rgb_data_param);
+            GPGPU.gpgpu.compute(clustering_rgb_data_param);
 
             if (i < parsed_data_n_n - 1) {
                 new_rgba_data.set(parsed_rgba_data, i * parsed_data_n * 4);
@@ -121,7 +119,7 @@ export class ClusteringImageRGB {
 
         //const test = rgba_data.slice(rgba_data.length / 2 + 256 * 16, rgba_data.length * 3 / 4);
 
-        gpgpu.clear(clustering_rgb_data_param.id);
+        GPGPU.gpgpu.clear(clustering_rgb_data_param.id);
 
         return new Uint8ClampedArray(new_rgba_data);
     }
@@ -154,7 +152,6 @@ export class ClusteringImageRGB {
             }
         `;
 
-        const gpgpu = GPGPU.CreateGPGPU();
         const dist_n_zero = new Float32Array(gmm_dist_n);
         const sams = new Float32Array(gmm_dist_n);
 
@@ -168,8 +165,8 @@ export class ClusteringImageRGB {
             }
         };
 
-        gpgpu.compute(sigma_abs_mean_sqrt_param);
-        gpgpu.clear(sigma_abs_mean_sqrt_param.id);
+        GPGPU.gpgpu.compute(sigma_abs_mean_sqrt_param);
+        GPGPU.gpgpu.clear(sigma_abs_mean_sqrt_param.id);
 
         const sams_sum = sams.reduce((x, y) => x + y);
         

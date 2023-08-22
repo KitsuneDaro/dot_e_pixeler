@@ -18,7 +18,7 @@ function App() {
             <div className='flex column'>
                 <Unit>
                     <Explain>
-                        ドット絵ぴくせらあ
+                        ドット絵ぴくせらあ(PC推奨)
                     </Explain>
                 </Unit>
                 <DrawImg param={parameter}></DrawImg>

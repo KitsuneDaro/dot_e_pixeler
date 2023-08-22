@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CreateGPGPU } from '../ClusteringImageRGB/GMMbyWebGL/src/gpgpu';
+import * as GPGPU from '../ClusteringImageRGB/GMMbyWebGL/src/gpgpu';
 
 class Parameter {
     shrinkingScale: number;
@@ -74,9 +74,7 @@ class Parameter {
         this.fileName = fileName;
         this.setFileName = setFileName;
 
-        const gpgpu = CreateGPGPU();
-
-        this.maxTextureSize = gpgpu.getMaxTextureSize();
+        this.maxTextureSize = GPGPU.gpgpu.getMaxTextureSize();
 
         this.loadingQuery = '#loading';
 

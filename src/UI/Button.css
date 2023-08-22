@@ -1,5 +1,6 @@
 button {
     height: 2rem;
+    display: block;
 
     margin: 0;
     padding: 0;

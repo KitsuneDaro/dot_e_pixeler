@@ -61,7 +61,7 @@ function ConvertingButton(
                 convertedCanvas.onresize = null;
             });
         } catch {
-            alert('画像の含む色に対して変換後の色数が多すぎる可能性があります！');
+            alert('画像の含む色に対して変換後の色数が多すぎる可能性があります！また、ブラウザがChrome、Edge以外の場合には正常に動かない可能性があります！');
         }
     }
 

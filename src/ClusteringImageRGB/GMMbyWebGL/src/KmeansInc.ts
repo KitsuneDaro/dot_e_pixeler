@@ -2,7 +2,6 @@ import * as GPGPU from './gpgpu';
 
 export function kmeansInc(dist_n: number, data_n: number, x: Float32Array): Float32Array[] {
     /* k-means++ class (3D限定) */
-    const gpgpu = GPGPU.CreateGPGPU();
 
     // Shaders
     const kmeans_inc_distance_shader = `
@@ -27,7 +26,7 @@ export function kmeansInc(dist_n: number, data_n: number, x: Float32Array): Floa
     // Variables
     const distance2 = new Float32Array(data_n).fill(Infinity);
 
-    const first_index = Math.floor(Math.random() * dist_n);
+    const first_index = Math.floor(Math.random() * data_n);
 
     const centers = new Float32Array(3 * dist_n);
     const center = x.slice(first_index * 3, first_index * 3 + 3);
@@ -48,13 +47,35 @@ export function kmeansInc(dist_n: number, data_n: number, x: Float32Array): Floa
     const sum_func = (accumulator: number, currentValue: number) => {
         return accumulator + currentValue;
     }
+/*
+    const y = new Uint8ClampedArray(100 * 100 * 4);
+    for (let i = 0; i < 100 * 100; i++) {
+        y.set(x.slice(i * 3, (i + 1) * 3), i * 4);
+        y[i * 4 + 3] = 255;
+    }
+
+    const p = document.createElement('canvas');
+    ClusteringImageRGB.DrawCanvasRGBAData(100, 100, y, p);
+    document.body.appendChild(p);
+*/
 
     for (let k = 1; k < dist_n; k++) {
         // distance2を計算
-        gpgpu.compute(kmeans_inc_distance_param);
+        GPGPU.gpgpu.compute(kmeans_inc_distance_param);
 
         // indexを累積和から計算
         let index = data_n - 1; // 浮動小数点によってdistance2の和が1.0にならなかったときのための初期値
+/*
+        const y = new Uint8ClampedArray(100 * 100 * 4);
+        for (let i = 0; i < 100 * 100; i++) {
+            y.set(distance2.slice(i * 3, (i + 1) * 3), i * 4);
+            y[i * 4 + 3] = 255;
+        }
+
+        const p = document.createElement('canvas');
+        ClusteringImageRGB.DrawCanvasRGBAData(100, 100, y, p);
+        document.body.appendChild(p);
+*/
         let distance2_sum = distance2.reduce(sum_func);
 
         if (distance2_sum == 0.0) {
@@ -78,16 +99,15 @@ export function kmeansInc(dist_n: number, data_n: number, x: Float32Array): Floa
         centers.set(center, k * 3);
     }
 
-    gpgpu.clear(kmeans_inc_distance_param.id);
+    GPGPU.gpgpu.clear(kmeans_inc_distance_param.id);
 
     return kmeans(dist_n, data_n, x, centers);
 }
 
 export function kmeans(dist_n: number, data_n: number, x: Float32Array, init_centers: Float32Array): Float32Array[] {
     /* k-means class (3D限定) */
-    const gpgpu = GPGPU.CreateGPGPU();
 
-    const max_texture_size = gpgpu.getMaxTextureSize();
+    const max_texture_size = GPGPU.gpgpu.getMaxTextureSize();
 
     const vec3_texture_m = Math.floor(max_texture_size / 3);
     const vec3_texture_w = 3 * vec3_texture_m;
@@ -190,8 +210,8 @@ export function kmeans(dist_n: number, data_n: number, x: Float32Array, init_cen
         id: 'kmeans_centers_shader',
         vertexShader: kmeans_centers_shader,
         args: {
-            'x_data': gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
-            'x_cluster': gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_m], x_cluster),
+            'x_data': GPGPU.gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
+            'x_cluster': GPGPU.gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_m], x_cluster),
             'zero': dist_n_zero,
             'x_cluster_n': x_cluster_n,
             'center': new_centers
@@ -200,8 +220,8 @@ export function kmeans(dist_n: number, data_n: number, x: Float32Array, init_cen
 
     for (let k = 0; k < 1; k++) {
 
-        gpgpu.compute(kmeans_clustering_param);
-        gpgpu.compute(kmeans_centers_param);
+        GPGPU.gpgpu.compute(kmeans_clustering_param);
+        GPGPU.gpgpu.compute(kmeans_centers_param);
 
         var flag = true;
 
@@ -226,8 +246,8 @@ export function kmeans(dist_n: number, data_n: number, x: Float32Array, init_cen
         centers.set(new_centers.slice(), 0);
     }
 
-    gpgpu.clear(kmeans_clustering_param.id);
-    gpgpu.clear(kmeans_centers_param.id);
+    GPGPU.gpgpu.clear(kmeans_clustering_param.id);
+    GPGPU.gpgpu.clear(kmeans_centers_param.id);
 
     return [centers, x_cluster.slice(0, data_n)];
 }

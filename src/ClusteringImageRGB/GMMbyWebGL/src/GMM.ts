@@ -35,7 +35,6 @@ export class GMM {
     static CreateGMM(
         dist_n: number, data_n: number, x: Float32Array, regularation_value: number = 0.0, max_iteration_time: number = 100, log_p_tolerance_value: number = 1e-6
     ): { gmm: GMM, gamma: Float32Array, gamma_sum: Float32Array } {
-        const gpgpu = GPGPU.CreateGPGPU();
 
         // Initialize
         const x_mu_std = this.EvalXMuStd(data_n, x);
@@ -46,7 +45,7 @@ export class GMM {
         const init_sigma = this.InitSigma(dist_n, x_std);
 
         // Variables
-        const max_texture_size = gpgpu.getMaxTextureSize();
+        const max_texture_size = GPGPU.gpgpu.getMaxTextureSize();
 
         const vec3_texture_m = Math.floor(max_texture_size / 3);
         const vec3_texture_w = 3 * vec3_texture_m;
@@ -316,7 +315,7 @@ export class GMM {
             id: 'norm_x_shader',
             vertexShader: norm_x_shader,
             args: {
-                'x': gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
+                'x': GPGPU.gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
                 'mu': mu,
                 'sigma': sigma,
                 'zero': dist_n_texture_zero,
@@ -329,7 +328,7 @@ export class GMM {
             id: 'norm_x_sum_shader',
             vertexShader: norm_x_sum_shader,
             args: {
-                'norm_x': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], norm_x),
+                'norm_x': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], norm_x),
                 'pi': pi,
                 'zero': data_n_texture_zero,
                 'norm_x_sum': norm_x_sum
@@ -340,8 +339,8 @@ export class GMM {
             id: 'gamma_shader',
             vertexShader: gamma_shader,
             args: {
-                'norm_x': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], norm_x),
-                'norm_x_sum': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_m], norm_x_sum),
+                'norm_x': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], norm_x),
+                'norm_x_sum': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_m], norm_x_sum),
                 'pi': pi,
                 'zero': dist_n_texture_zero,
                 'gamma': gamma
@@ -352,7 +351,7 @@ export class GMM {
             id: 'gamma_sum_shader',
             vertexShader: gamma_sum_shader,
             args: {
-                'gamma': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
+                'gamma': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
                 'zero': dist_n_zero,
                 'gamma_sum': gamma_sum
             }
@@ -362,9 +361,9 @@ export class GMM {
             id: 'sigma_shader',
             vertexShader: sigma_shader,
             args: {
-                'x_data': gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
+                'x_data': GPGPU.gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
                 'mu': mu,
-                'gamma': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
+                'gamma': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
                 'gamma_sum': gamma_sum,
                 'zero': dist_n_vec3_zero,
                 'sigma': sigma
@@ -375,8 +374,8 @@ export class GMM {
             id: 'mu_pi_shader',
             vertexShader: mu_pi_shader,
             args: {
-                'x_data': gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
-                'gamma': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
+                'x_data': GPGPU.gpgpu.makeTextureInfo('float', [vec3_texture_h, vec3_texture_w], padding_x),
+                'gamma': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
                 'gamma_sum': gamma_sum,
                 'zero': dist_n_zero,
                 'mu': mu,
@@ -385,22 +384,22 @@ export class GMM {
         };
 
         // 1. norm_x, norm_sum
-        gpgpu.compute(norm_x_param);
-        gpgpu.compute(norm_x_sum_param);
+        GPGPU.gpgpu.compute(norm_x_param);
+        GPGPU.gpgpu.compute(norm_x_sum_param);
 
         for (var i = 0; i < max_iteration_time; i++) {
             // 2. gamma, gamma_sum
 
-            gpgpu.compute(gamma_param);
-            gpgpu.compute(gamma_sum_param);
+            GPGPU.gpgpu.compute(gamma_param);
+            GPGPU.gpgpu.compute(gamma_sum_param);
 
             //console.log(gamma);
             //console.log(gamma_sum);
 
             // 3. mu, pi, sigma
 
-            gpgpu.compute(sigma_param);
-            gpgpu.compute(mu_pi_param);
+            GPGPU.gpgpu.compute(sigma_param);
+            GPGPU.gpgpu.compute(mu_pi_param);
 
             //console.log(sigma);
             //console.log(mu);
@@ -408,8 +407,8 @@ export class GMM {
 
             // 4. norm_x, norm_sum
 
-            gpgpu.compute(norm_x_param);
-            gpgpu.compute(norm_x_sum_param);
+            GPGPU.gpgpu.compute(norm_x_param);
+            GPGPU.gpgpu.compute(norm_x_sum_param);
 
             //console.log(norm_x);
             //console.log(norm_x_sum);
@@ -427,9 +426,14 @@ export class GMM {
             }
         }
 
-        gpgpu.clearAll();
+        GPGPU.gpgpu.clear(norm_x_param.id);
+        GPGPU.gpgpu.clear(norm_x_sum_param.id);
 
-        console.log(mu, dist_n);
+        GPGPU.gpgpu.clear(gamma_param.id);
+        GPGPU.gpgpu.clear(gamma_sum_param.id);
+        
+        GPGPU.gpgpu.clear(sigma_param.id);
+        GPGPU.gpgpu.clear(mu_pi_param.id);
 
         return {
             gmm: new GMM(dist_n, mu, pi, sigma),
@@ -463,9 +467,8 @@ export class GMM {
 
     //　gammaから事後確率を計算
     static PostProbByGamma(dist_n: number, data_n: number, gamma: Float32Array): Float32Array {
-        const gpgpu = GPGPU.CreateGPGPU();
 
-        const max_texture_size = gpgpu.getMaxTextureSize();
+        const max_texture_size = GPGPU.gpgpu.getMaxTextureSize();
 
         const dist_n_texture_m = Math.floor(max_texture_size / dist_n);
         const dist_n_texture_w = dist_n * dist_n_texture_m;
@@ -528,7 +531,7 @@ export class GMM {
             id: 'gamma_sum_shader',
             vertexShader: gamma_sum_shader,
             args: {
-                'gamma': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
+                'gamma': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], gamma),
                 'zero': data_n_zero,
                 'gamma_sum': gamma_sum
             }
@@ -538,25 +541,24 @@ export class GMM {
             id: 'post_prob_shader',
             vertexShader: post_prob_shader,
             args: {
-                'gamma_sum': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_m], gamma_sum),
+                'gamma_sum': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_m], gamma_sum),
                 'gamma': gamma,
                 'post_prob': post_prob
             }
         }
 
-        gpgpu.compute(gamma_sum_param);
-        gpgpu.compute(post_prob_param);
+        GPGPU.gpgpu.compute(gamma_sum_param);
+        GPGPU.gpgpu.compute(post_prob_param);
 
-        gpgpu.clear(gamma_sum_param.id);
-        gpgpu.clear(post_prob_param.id);
+        GPGPU.gpgpu.clear(gamma_sum_param.id);
+        GPGPU.gpgpu.clear(post_prob_param.id);
 
         return post_prob; // sliceしない。
     }
 
     static ClusteringByPostProb(dist_n: number, data_n: number, post_prob: Float32Array): Uint32Array {
-        const gpgpu = GPGPU.CreateGPGPU();
         
-        const max_texture_size = gpgpu.getMaxTextureSize();
+        const max_texture_size = GPGPU.gpgpu.getMaxTextureSize();
 
         const dist_n_texture_m = Math.floor(max_texture_size / dist_n);
         const dist_n_texture_w = dist_n * dist_n_texture_m;
@@ -598,14 +600,14 @@ export class GMM {
             id: 'clustering_shader',
             vertexShader: clustering_shader,
             args: {
-                'post_prob': gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], post_prob),
+                'post_prob': GPGPU.gpgpu.makeTextureInfo('float', [dist_n_texture_h, dist_n_texture_w], post_prob),
                 'zero': data_n_zero,
                 'x_cluster': x_cluster
             }
         }
 
-        gpgpu.compute(clustering_param);
-        gpgpu.clear(clustering_param.id);
+        GPGPU.gpgpu.compute(clustering_param);
+        GPGPU.gpgpu.clear(clustering_param.id);
 
         return new Uint32Array(x_cluster);
     }
@@ -668,53 +670,3 @@ export class GMM {
         return Math.sqrt(-2 * Math.log(1 - Math.random())) * Math.cos(2 * Math.PI * Math.random());
     }
 }
-
-/*// EvalXMuStd修正前
-        const gpgpu = GPGPU.CreateGPGPU();
-
-        const parsed_data_n = gpgpu.getMaxTextureSize();
-        const _parseddata_n_n = Math.ceil(data_n / parsed_data_n);
-
-        const x_mu_std_shader = `
-            uniform sampler2D x;
-
-            in vec3 x_sum;
-            in vec3 x_sum2;
-            out vec3 new_x_sum;
-            out vec3 new_x_sum2;
-
-            float getSampler2D(sampler2D data, int x, int y) {
-                return texelFetch(data, ivec2(x, y), 0).r;
-            }
-    
-            vec3 getSampler2DVec3(sampler2D data, int x) {
-                return vec3(getSampler2D(data, 0, x), getSampler2D(data, 1, x), getSampler2D(data, 2, x));
-            }
-
-            void main() {
-                new_x_sum = x_sum;
-                new_x_sum2 = x_sum;
-                
-                for (int k = 0; k < ${parsed_data_n}; k++) {
-                    vec3 x_vec3 = getSampler2D(x, k);
-
-                    new_x_sum += x_vec3;
-                    new_x_sum2 += vec3(x_vec3[0] * x_vec3[0], x_vec3[1] * x_vec3[1], x_vec3[2] * x_vec3[2]);
-                }
-            }
-        `
-*/
-        /*
-        const x_mu_std_param = {
-            id: 'x_mu_std_shader',
-            vertexShader: x_mu_std_shader,
-            args: {
-                'x': gpgpu.makeTextureInfo('float', [parsed_data_n, 3], x),
-                'x_sum': x_mu,
-                'x_sum2': x_std
-            }
-        }
-
-        gpgpu.compute(x_mu_std_param);
-        gpgpu.clear(x_mu_std_param.id);
-        */

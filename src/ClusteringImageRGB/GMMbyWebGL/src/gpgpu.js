@@ -3,6 +3,9 @@
 
     この関数の内部に関数やクラスを入れて外部から参照されないようにします。
 */
+
+export const gpgpu = CreateGPGPU();
+
 export function CreateGPGPU(canvas) {
     let gl;
 
